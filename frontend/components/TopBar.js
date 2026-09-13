@@ -1,10 +1,15 @@
-import { Search, Mic, Bell, ChevronDown, User, LogOut } from "lucide-react";
-import { useState } from "react";
+import { Search, Mic, Bell, ChevronDown, User, LogOut, Menu } from "lucide-react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 
-export default function TopBar({ userName, title, subtitle }) {
+export default function TopBar({ userName, title, subtitle, onMenuToggle }) {
   const [showDropdown, setShowDropdown] = useState(false);
+  const [role, setRole] = useState("student");
   const router = useRouter();
+
+  useEffect(() => {
+    setRole(localStorage.getItem("user_role") || localStorage.getItem("role") || "student");
+  }, []);
 
   const handleLogout = () => {
     localStorage.clear();
@@ -12,9 +17,18 @@ export default function TopBar({ userName, title, subtitle }) {
   };
   return (
     <div className="topbar">
-      <div>
-        <h2 className="text-xl font-bold">{title || `Hello, ${userName || "Student"} 👋`}</h2>
-        <p className="text-sm text-muted">{subtitle || "What would you like to learn today?"}</p>
+      <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+        <button 
+          className="mobile-menu-btn" 
+          onClick={onMenuToggle}
+          style={{ background: "none", border: "none", cursor: "pointer", display: "none", padding: "8px", margin: "-8px" }}
+        >
+          <Menu size={24} className="text-main" />
+        </button>
+        <div>
+          <h2 className="text-xl font-bold">{title || `Hello, ${userName || (role === 'parent' ? "Parent" : "Student")} 👋`}</h2>
+          <p className="text-sm text-muted">{subtitle || (role === 'parent' ? "Monitor your child's learning journey" : "What would you like to learn today?")}</p>
+        </div>
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
@@ -22,17 +36,14 @@ export default function TopBar({ userName, title, subtitle }) {
           <Search size={18} className="text-muted" />
           <input 
             type="text" 
-            placeholder="Ask anything or press the mic..." 
+            placeholder={role === 'student' ? "Ask anything or press the mic..." : "Search..."} 
             className="search-input"
           />
-          <button style={{ background: "var(--purple)", color: "white", border: "none", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-            <Mic size={16} />
-          </button>
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
-          <span className="text-sm font-medium">Class 10</span>
-          <ChevronDown size={16} className="text-muted" />
+          {role === 'student' && !["/profile", "/history", "/dashboard", "/parent", "/progress"].includes(router.pathname) && (
+            <button style={{ background: "var(--purple)", color: "white", border: "none", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+              <Mic size={16} />
+            </button>
+          )}
         </div>
 
         <div style={{ position: "relative", cursor: "pointer" }}>

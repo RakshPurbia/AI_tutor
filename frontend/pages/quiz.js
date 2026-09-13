@@ -67,7 +67,7 @@ export default function Quiz() {
   }
 
   return (
-    <DashboardLayout userName={localStorage.getItem("student_name") || "Student"} title="AI Generated Quiz" subtitle={quiz.title}>
+    <DashboardLayout userName={typeof window !== "undefined" ? (localStorage.getItem("student_name") || "Student") : "Student"} title="AI Generated Quiz" subtitle={quiz.title}>
       <div style={{ maxWidth: "800px", margin: "0 auto", background: "var(--card)", borderRadius: "16px", border: "1px solid var(--border)", padding: "32px", position: "relative" }}>
         
         <button 

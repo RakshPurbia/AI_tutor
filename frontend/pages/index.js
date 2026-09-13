@@ -56,7 +56,8 @@ export default function UnifiedPortal() {
         localStorage.setItem("teacher_id", data.user_id);
         router.push("/teacher/dashboard");
       } else {
-        router.push("/parent/dashboard");
+        localStorage.setItem("parent_id", data.user_id);
+        router.push("/parent");
       }
     } catch (err) {
       setError(err.message);
@@ -67,17 +68,17 @@ export default function UnifiedPortal() {
   const activeRole = roles.find(r => r.id === selectedRole);
 
   return (
-    <div style={{ display: "flex", height: "100vh", width: "100vw", backgroundColor: "#ffffff", color: "#0f172a", overflow: "hidden" }}>
+    <div className="unified-portal-container" style={{ display: "flex", height: "100vh", width: "100vw", backgroundColor: "#ffffff", color: "#0f172a", overflow: "hidden" }}>
       
       {/* Left Column: Beautiful layout mimicking the provided image */}
-      <div style={{ flex: 1.3, display: "flex", padding: "40px 60px", backgroundColor: "#f9f8ff", position: "relative", overflow: "hidden" }}>
+      <div className="portal-left-column" style={{ flex: 1.3, display: "flex", padding: "40px 60px", backgroundColor: "#f9f8ff", position: "relative", overflow: "hidden" }}>
         
         {/* Soft gradient floor for the 3D character */}
         <div style={{ position: "absolute", bottom: 0, left: 0, width: "100%", height: "30%", background: "linear-gradient(180deg, rgba(249,248,255,0) 0%, #edeaff 100%)", zIndex: 0 }}></div>
 
         {/* Left Side (Text & Features) */}
-        <div style={{ flex: 1, zIndex: 1, display: "flex", flexDirection: "column", justifyContent: "center", maxWidth: "420px", opacity: mounted ? 1 : 0, transform: mounted ? "translateX(0)" : "translateX(-20px)", transition: "all 0.8s cubic-bezier(0.16, 1, 0.3, 1)" }}>
-          <h1 style={{ fontSize: "44px", fontWeight: "900", color: "#0f172a", lineHeight: "1.15", marginBottom: "16px", letterSpacing: "-1px" }}>
+        <div className="portal-text-content" style={{ flex: 1, zIndex: 1, display: "flex", flexDirection: "column", justifyContent: "center", maxWidth: "420px", opacity: mounted ? 1 : 0, transform: mounted ? "translateX(0)" : "translateX(-20px)", transition: "all 0.8s cubic-bezier(0.16, 1, 0.3, 1)" }}>
+          <h1 className="portal-title" style={{ fontSize: "44px", fontWeight: "900", color: "#0f172a", lineHeight: "1.15", marginBottom: "16px", letterSpacing: "-1px" }}>
             <span style={{ color: "#6d28d9" }}>AI-Powered</span><br />
             Learning for<br />Everyone
           </h1>
@@ -123,7 +124,7 @@ export default function UnifiedPortal() {
         </div>
 
         {/* Right Side (3D Image) */}
-        <div style={{ flex: 1.2, zIndex: 1, position: "relative", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+        <div className="portal-3d-image-container" style={{ flex: 1.2, zIndex: 1, position: "relative", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
           <img 
             src="/3d-student.png" 
             alt="3D Student" 
@@ -141,7 +142,7 @@ export default function UnifiedPortal() {
       </div>
 
       {/* Right Column: Interactive Login Portal (replaces the flat buttons from the reference image) */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "64px", maxWidth: "600px", margin: "0 auto", zIndex: 10, overflowY: "auto", backgroundColor: "#ffffff" }}>
+      <div className="portal-right-column" style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "64px", maxWidth: "600px", margin: "0 auto", zIndex: 10, overflowY: "auto", backgroundColor: "#ffffff" }}>
         
         <div style={{ opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(20px)", transition: "all 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s" }}>
           
@@ -355,6 +356,42 @@ export default function UnifiedPortal() {
           }
           .auth-input::placeholder {
             color: #94a3b8;
+          }
+
+          /* Responsive Styles */
+          @media (max-width: 1024px) {
+            .unified-portal-container {
+              flex-direction: column !important;
+              overflow-y: auto !important;
+            }
+            .portal-left-column {
+              flex: none !important;
+              padding: 40px 24px !important;
+              min-height: 400px;
+            }
+            .portal-right-column {
+              flex: none !important;
+              padding: 40px 24px !important;
+              max-width: 100% !important;
+              width: 100%;
+            }
+            .portal-3d-image-container {
+              display: none !important; /* Hide 3D image on smaller screens */
+            }
+            .portal-text-content {
+              max-width: 100% !important;
+              align-items: center;
+              text-align: center;
+            }
+          }
+          
+          @media (max-width: 640px) {
+            .portal-title {
+              fontSize: 32px !important;
+            }
+            .portal-right-column form {
+              padding: 24px !important;
+            }
           }
         `}} />
       </div>

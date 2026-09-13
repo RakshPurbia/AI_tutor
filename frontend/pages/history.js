@@ -1,7 +1,14 @@
 import DashboardLayout from "../components/DashboardLayout";
 import { BookOpen, ChevronRight } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export default function History() {
+  const [role, setRole] = useState("student");
+
+  useEffect(() => {
+    setRole(localStorage.getItem("user_role") || localStorage.getItem("role") || "student");
+  }, []);
+
   const historyItems = [
     { title: "Science - Chapter 5", desc: "Life Processes in Plants - 30m", time: "Today, 10:00 AM", color: "var(--purple)", bg: "var(--purple-light)" },
     { title: "Mathematics - Chapter 3", desc: "Pair of Linear Equations - 45m", time: "Today, 09:15 AM", color: "#0284c7", bg: "#e0f2fe" },
@@ -10,16 +17,22 @@ export default function History() {
   ];
 
   return (
-    <DashboardLayout userName="Ananya" title="Learning History">
+    <DashboardLayout 
+      userName="Ananya" 
+      title={role === "parent" ? "Child Learning History" : "Learning History"}
+      subtitle={role === "parent" ? "Overview of recent lessons and activities" : undefined}
+    >
       <div style={{ maxWidth: "800px" }}>
         
-        {/* Tabs */}
-        <div style={{ display: "flex", gap: "32px", borderBottom: "1px solid var(--border)", marginBottom: "32px" }}>
-          <div style={{ padding: "12px 0", borderBottom: "2px solid var(--purple)", color: "var(--purple)", fontWeight: "600", cursor: "pointer" }}>Lessons</div>
-          <div style={{ padding: "12px 0", color: "var(--text-muted)", cursor: "pointer" }}>Chats</div>
-          <div style={{ padding: "12px 0", color: "var(--text-muted)", cursor: "pointer" }}>Quizzes</div>
-          <div style={{ padding: "12px 0", color: "var(--text-muted)", cursor: "pointer" }}>Uploads</div>
-        </div>
+        {/* Tabs (Hidden for Parents for a simpler summary view) */}
+        {role !== "parent" && (
+          <div style={{ display: "flex", gap: "32px", borderBottom: "1px solid var(--border)", marginBottom: "32px" }}>
+            <div style={{ padding: "12px 0", borderBottom: "2px solid var(--purple)", color: "var(--purple)", fontWeight: "600", cursor: "pointer" }}>Lessons</div>
+            <div style={{ padding: "12px 0", color: "var(--text-muted)", cursor: "pointer" }}>Chats</div>
+            <div style={{ padding: "12px 0", color: "var(--text-muted)", cursor: "pointer" }}>Quizzes</div>
+            <div style={{ padding: "12px 0", color: "var(--text-muted)", cursor: "pointer" }}>Uploads</div>
+          </div>
+        )}
 
         {/* List */}
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>

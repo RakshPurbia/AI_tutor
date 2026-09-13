@@ -61,7 +61,7 @@ export default function Upload() {
       const data = await res.json();
       const lessonId = data.lesson_id;
 
-      // 2. Auto-generate a simple quiz
+      // 2. Auto-generate quiz using AI
       await fetch("http://localhost:8000/api/teacher/quiz", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -69,18 +69,7 @@ export default function Upload() {
           teacher_id: teacherId,
           lesson_id: lessonId,
           title: `${title} - Auto Quiz`,
-          questions: [
-            {
-              question_text: `What is the main topic of ${title}?`,
-              options: [subject || "Subject", "Math", "History", "Geography"],
-              correct_answer: subject || "Subject"
-            },
-            {
-              question_text: "Did you understand the material?",
-              options: ["Yes", "No", "Partially", "Not at all"],
-              correct_answer: "Yes"
-            }
-          ]
+          questions: [] // Empty array triggers AI generation in backend
         })
       });
 
@@ -153,7 +142,7 @@ export default function Upload() {
           </div>
 
           <button type="submit" className="btn-primary" style={{ padding: "16px" }} disabled={isUploading || !classId || !file}>
-            {isUploading ? "Uploading & Processing..." : "Upload Lesson & Auto-generate Quiz"}
+            {isUploading ? "Uploading & Generating AI Quiz..." : "Upload Lesson & Auto-generate Quiz"}
           </button>
         </form>
 

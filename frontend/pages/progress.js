@@ -1,7 +1,14 @@
 import DashboardLayout from "../components/DashboardLayout";
 import { Clock, BookOpen, Trophy, Flame } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export default function Progress() {
+  const [role, setRole] = useState("student");
+
+  useEffect(() => {
+    setRole(localStorage.getItem("user_role") || localStorage.getItem("role") || "student");
+  }, []);
+
   const stats = [
     { label: "Study Time This Week", value: "6h 45m", icon: <Clock size={20} />, color: "var(--purple)", bg: "var(--purple-light)" },
     { label: "Lessons Completed This Week", value: "12", icon: <BookOpen size={20} />, color: "#0284c7", bg: "#e0f2fe" },
@@ -23,7 +30,11 @@ export default function Progress() {
   ];
 
   return (
-    <DashboardLayout userName="Ananya" title="My Progress">
+    <DashboardLayout 
+      userName="Ananya" 
+      title={role === "parent" ? "Student Progress Summary" : "My Progress"}
+      subtitle={role === "parent" ? "Overview of student progress and AI recommendations" : "Keep up the great work!"}
+    >
       <div style={{ maxWidth: "1000px" }}>
         
         {/* Top Stats Grid */}
@@ -32,9 +43,6 @@ export default function Progress() {
             <div key={i} className="card" style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
               <p className="text-xs text-muted mb-4 font-semibold">{s.label}</p>
               <h3 className="text-2xl font-bold mb-4">{s.value}</h3>
-              {/* <div style={{ background: s.bg, color: s.color, padding: "8px", borderRadius: "50%" }}>
-                {s.icon}
-              </div> */}
             </div>
           ))}
         </div>
@@ -58,21 +66,43 @@ export default function Progress() {
             </div>
           </div>
 
-          {/* Weak Topics */}
-          <div className="card" style={{ display: "flex", flexDirection: "column" }}>
-            <h3 className="text-lg font-bold mb-6">Weak Topics</h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px", flex: 1 }}>
-              {weakTopics.map((topic, i) => (
-                <div key={i} style={{ padding: "16px", border: "1px solid var(--border)", borderRadius: "12px", display: "flex", alignItems: "center", gap: "12px" }}>
-                  <div style={{ width: "32px", height: "32px", background: "var(--red-light)", color: "var(--red)", borderRadius: "8px", display: "flex", alignItems: "center", justifyItems: "center", padding: "6px" }}>
-                    <Flame size={20} />
+          {/* AI Recommendation / Weak Topics */}
+          {role === "parent" ? (
+            <div className="card" style={{ display: "flex", flexDirection: "column", background: "var(--purple-bg)", borderColor: "var(--purple-border)" }}>
+              <h3 className="text-lg font-bold mb-4" style={{ color: "var(--purple-dark)" }}>AI Recommendations & Insights</h3>
+              <p className="text-base mb-6" style={{ lineHeight: "1.6", color: "var(--text-main)" }}>
+                Ananya has been struggling slightly with <strong>Photosynthesis</strong> and <strong>Algebraic Equations</strong>. 
+                Encourage them to revise these topics. They are performing exceptionally well in English!
+              </p>
+              <h4 className="text-sm font-bold mb-4">Areas to Focus:</h4>
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "24px" }}>
+                {weakTopics.map((topic, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <div style={{ width: "8px", height: "8px", background: "var(--red)", borderRadius: "50%" }}></div>
+                    <span className="text-sm font-medium">{topic}</span>
                   </div>
-                  <span className="text-sm font-medium">{topic}</span>
-                </div>
-              ))}
+                ))}
+              </div>
+              <div style={{ marginTop: "auto" }}>
+                <button className="btn-primary w-full" style={{ padding: "14px" }}>View Detailed Report</button>
+              </div>
             </div>
-            <button className="btn-primary" style={{ marginTop: "24px" }}>Get Recommendations</button>
-          </div>
+          ) : (
+            <div className="card" style={{ display: "flex", flexDirection: "column" }}>
+              <h3 className="text-lg font-bold mb-6">Weak Topics</h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px", flex: 1 }}>
+                {weakTopics.map((topic, i) => (
+                  <div key={i} style={{ padding: "16px", border: "1px solid var(--border)", borderRadius: "12px", display: "flex", alignItems: "center", gap: "12px" }}>
+                    <div style={{ width: "32px", height: "32px", background: "var(--red-light)", color: "var(--red)", borderRadius: "8px", display: "flex", alignItems: "center", justifyItems: "center", padding: "6px" }}>
+                      <Flame size={20} />
+                    </div>
+                    <span className="text-sm font-medium">{topic}</span>
+                  </div>
+                ))}
+              </div>
+              <button className="btn-primary" style={{ marginTop: "24px" }}>Get Recommendations</button>
+            </div>
+          )}
         </div>
 
       </div>

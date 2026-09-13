@@ -14,13 +14,13 @@ export default function Dashboard() {
     const studentId = localStorage.getItem("student_id");
     setStudentName(name);
 
-    if (studentId) {
+    if (studentId && studentId !== "undefined") {
       // Fetch Lessons
       fetch(`http://localhost:8000/api/student/${studentId}/lessons`)
         .then(res => res.json())
         .then(data => setLessons(data))
         .catch(err => console.error("Error fetching lessons", err));
-      
+
       // Fetch Quizzes
       fetch(`http://localhost:8000/api/student/${studentId}/quizzes`)
         .then(res => res.json())
@@ -32,7 +32,7 @@ export default function Dashboard() {
   return (
     <DashboardLayout userName={studentName} title="Dashboard" subtitle="Welcome back!">
       <div style={{ maxWidth: "1200px" }}>
-        
+
         {/* Continue Learning Section */}
         <section style={{ marginBottom: "48px" }}>
           <h2 className="text-xl font-bold mb-6">Continue Learning</h2>
@@ -98,8 +98,8 @@ export default function Dashboard() {
                       <h4 className="font-bold mb-1">{quiz.title}</h4>
                       <p className="text-sm text-muted">For {quiz.lesson_title}</p>
                     </div>
-                    <button 
-                      className="btn-outline" 
+                    <button
+                      className="btn-outline"
                       style={{ padding: "8px 16px", fontSize: "14px", borderColor: quiz.attempted > 0 ? "var(--green)" : "var(--purple)", color: quiz.attempted > 0 ? "var(--green)" : "var(--purple)" }}
                       onClick={() => router.push(`/quiz?id=${quiz.quiz_id}`)}
                     >

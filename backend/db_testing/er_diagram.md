@@ -23,7 +23,6 @@ erDiagram
         VARCHAR department
         TEXT bio
     }
-    
     student_profiles {
         UUID user_id PK, FK
         VARCHAR grade

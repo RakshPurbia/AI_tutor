@@ -1,28 +1,32 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { api } from "../../lib/api";
-import TeacherNav from "../../components/TeacherNav";
+import DashboardLayout from "../../components/DashboardLayout";
 
 export default function TeacherUpload() {
   const router = useRouter();
-  const [classes, setClasses] = useState([]);
+  const [students, setStudents] = useState([]);
   const [title, setTitle] = useState("");
   const [subject, setSubject] = useState("Science");
-  const [classId, setClassId] = useState("");
+  const [selectedStudents, setSelectedStudents] = useState([]);
   const [fileName, setFileName] = useState("");
   const [ocrText, setOcrText] = useState("");
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
+  const [userName, setUserName] = useState("Teacher");
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      setUserName(localStorage.getItem("user_name") || "Teacher");
+    }
     const teacherId = localStorage.getItem("teacher_id");
     if (!teacherId) {
       router.push("/teacher/login");
       return;
     }
-    api.getTeacherClasses(teacherId).then((cls) => {
-      setClasses(cls);
-      if (cls[0]) setClassId(cls[0].id);
+    api.getTeacherStudents(teacherId).then((st) => {
+      setStudents(st);
+      if (st.length > 0) setSelectedStudents([]); // start with none selected
     });
   }, [router]);
 
@@ -37,7 +41,7 @@ export default function TeacherUpload() {
     try {
       await api.uploadContent({
         teacher_id: teacherId,
-        class_id: classId,
+        student_ids: selectedStudents,
         title,
         subject,
         file_name: fileName || "untitled.pdf",
@@ -52,7 +56,7 @@ export default function TeacherUpload() {
   };
 
   return (
-    <TeacherNav>
+    <DashboardLayout userName={userName} title="Upload Lesson" subtitle="Upload PPT/PDF materials and assign them to a student.">
       <div className="card">
         <p className="step-title">Upload Learning Material</p>
 
@@ -78,12 +82,25 @@ export default function TeacherUpload() {
         <label>Subject</label>
         <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} />
 
-        <label>Assign To</label>
-        <select value={classId} onChange={(e) => setClassId(e.target.value)}>
-          {classes.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
+        <label>Assign To (Students)</label>
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "14px", border: "1px solid var(--border)", padding: "10px", borderRadius: "8px", maxHeight: "150px", overflowY: "auto" }}>
+          {students.map((s) => (
+            <label key={s.id} style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontSize: "14px", fontWeight: "normal", marginBottom: 0 }}>
+              <input 
+                type="checkbox" 
+                checked={selectedStudents.includes(s.id)}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedStudents([...selectedStudents, s.id]);
+                  } else {
+                    setSelectedStudents(selectedStudents.filter(id => id !== s.id));
+                  }
+                }}
+              />
+              {s.name}
+            </label>
           ))}
-        </select>
+        </div>
 
         <label style={{ marginTop: 8 }}>
           Extracted text (stand-in for PaddleOCR output - paste or type the
@@ -97,16 +114,16 @@ export default function TeacherUpload() {
         />
 
         {!done ? (
-          <button className="btn-primary" disabled={!title || !classId || !ocrText || saving} onClick={submit}>
+          <button className="btn-primary" disabled={!title || selectedStudents.length === 0 || !ocrText || saving} onClick={submit}>
             {saving ? "Uploading..." : "Upload & Assign"}
           </button>
         ) : (
           <div style={{ background: "var(--green-light)", color: "var(--green)", padding: 16, borderRadius: 12, textAlign: "center" }}>
-            Uploaded and assigned! Students in this class will now see it
+            Uploaded and assigned! The assigned student will now see it
             under &ldquo;Uploaded Lessons.&rdquo;
           </div>
         )}
       </div>
-    </TeacherNav>
+    </DashboardLayout>
   );
 }

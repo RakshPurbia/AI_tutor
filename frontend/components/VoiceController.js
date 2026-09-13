@@ -1,18 +1,35 @@
-import { useEffect, useState, useCallback, useRef } from "react";
-import { Mic, MicOff, Volume2 } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import { Mic, Loader2, Volume2, Sparkles } from "lucide-react";
 import { useRouter } from "next/router";
 
 export default function VoiceController() {
-  const [isListening, setIsListening] = useState(false);
-  const [transcript, setTranscript] = useState("");
-  const router = useRouter();
+  const [displayStatus, setDisplayStatus] = useState("idle"); 
+  const [displayTranscript, setDisplayTranscript] = useState("");
+  
+  const statusRef = useRef("idle"); // 'idle', 'recording', 'processing', 'speaking'
+  const accumulatedQueryRef = useRef("");
+  const recognitionRef = useRef(null);
+  const recordingTimeoutRef = useRef(null);
   const audioRef = useRef(null);
+  const routerRef = useRef(null);
 
-  const speak = useCallback(async (text) => {
-    // API: Piper TTS is used here for Text-to-Speech (instead of browser native synthesis)
-    if (audioRef.current) {
-      audioRef.current.pause();
+  const router = useRouter();
+  useEffect(() => { routerRef.current = router; }, [router]);
+
+  const updateStatus = (newStatus) => {
+    statusRef.current = newStatus;
+    setDisplayStatus(newStatus);
+  };
+
+  const playTTS = async (text, onComplete) => {
+    updateStatus("speaking");
+    if (audioRef.current) audioRef.current.pause();
+    
+    // temporarily stop recognition so it doesn't hear itself
+    if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch(e) {}
     }
+
     try {
       const res = await fetch("http://localhost:8000/api/tts", {
         method: "POST",
@@ -24,101 +41,209 @@ export default function VoiceController() {
         const url = URL.createObjectURL(blob);
         const audio = new Audio(url);
         audioRef.current = audio;
-        audio.play();
+        
+        audio.onended = () => {
+          if (onComplete) onComplete();
+          updateStatus("idle");
+          setDisplayTranscript("");
+          if (recognitionRef.current) {
+            try { recognitionRef.current.start(); } catch(e) {}
+          }
+        };
+        audio.play().catch(e => {
+            console.error("Audio playback blocked:", e);
+            updateStatus("idle");
+            if (recognitionRef.current) {
+                try { recognitionRef.current.start(); } catch(e) {}
+            }
+        });
+      } else {
+         if (onComplete) onComplete();
+         updateStatus("idle");
+         if (recognitionRef.current) {
+            try { recognitionRef.current.start(); } catch(e) {}
+         }
       }
     } catch (err) {
       console.error("Piper TTS failed:", err);
+      updateStatus("idle");
+      if (recognitionRef.current) {
+        try { recognitionRef.current.start(); } catch(e) {}
+      }
     }
-  }, []);
+  };
 
-  const handleCommand = useCallback((command) => {
-    const cmd = command.toLowerCase();
-    
-    if (cmd.includes("go to quizzes") || cmd.includes("open quizzes")) {
-      speak("Going to quizzes.");
-      router.push("/quizzes");
-    } else if (cmd.includes("go to dashboard") || cmd.includes("home")) {
-      speak("Going to dashboard.");
-      router.push("/dashboard");
-    } else if (cmd.includes("start quiz")) {
-      speak("Starting quiz.");
-      // If we are on dashboard, just find the first quiz. For demo, we just route to /quizzes
-      router.push("/quizzes");
-    } else if (cmd.includes("read lesson") || cmd.includes("read text")) {
-      // Find text on screen and read it
-      const headings = Array.from(document.querySelectorAll("h1, h2, h3, p")).map(el => el.innerText).join(". ");
-      speak(`Reading page content. ${headings}`);
-    } else if (cmd.includes("stop") || cmd.includes("quiet")) {
-      if (audioRef.current) audioRef.current.pause();
-    } else {
-      speak("I heard you say: " + command + ". You can say 'go to dashboard', 'go to quizzes', or 'read lesson'.");
+  const sendToAI = async (query) => {
+    updateStatus("processing");
+    try {
+      const studentId = localStorage.getItem("student_id") || "00000000-0000-0000-0000-000000000002";
+      const res = await fetch("http://localhost:8000/api/tutor/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          student_id: studentId, 
+          question: query,
+          page_context: routerRef.current.pathname 
+        })
+      });
+      const data = await res.json();
+      playTTS(data.answer);
+    } catch (err) {
+      console.error("AI fetch failed:", err);
+      playTTS("Sorry, I could not reach the server right now.");
     }
-  }, [router, speak]);
+  };
+
+  const finishRecording = () => {
+    const finalQuery = accumulatedQueryRef.current.trim();
+    accumulatedQueryRef.current = "";
+    
+    if (finalQuery.length > 0) {
+      const lower = finalQuery.toLowerCase();
+      // Navigation commands
+      if (lower.includes("go to dashboard") || lower.includes("open dashboard") || lower.includes("home")) {
+          playTTS("Going to dashboard.");
+          routerRef.current.push("/dashboard");
+          return;
+      }
+      if (lower.includes("go to quiz") || lower.includes("open quiz") || lower.includes("quizzes")) {
+          playTTS("Opening quizzes.");
+          routerRef.current.push("/quizzes");
+          return;
+      }
+      if (lower.includes("go to profile") || lower.includes("open profile")) {
+          playTTS("Opening profile.");
+          routerRef.current.push("/profile");
+          return;
+      }
+      if (lower.includes("go to tutor") || lower.includes("open tutor") || lower.includes("ai tutor")) {
+          playTTS("Opening AI Tutor.");
+          routerRef.current.push("/tutor");
+          return;
+      }
+
+      // If we are already on the tutor page, let the tutor page handle it natively!
+      if (routerRef.current.pathname === "/tutor") {
+          updateStatus("idle");
+          setDisplayTranscript("");
+          window.dispatchEvent(new CustomEvent("tutor_query", { detail: finalQuery }));
+          return;
+      }
+
+      // Otherwise send to AI via global popup
+      sendToAI(finalQuery);
+    } else {
+      updateStatus("idle");
+      setDisplayTranscript("");
+    }
+  };
+
+  const resetRecordingTimeout = () => {
+    if (recordingTimeoutRef.current) clearTimeout(recordingTimeoutRef.current);
+    // If no speech for 1.5 seconds while recording, assume they are done
+    recordingTimeoutRef.current = setTimeout(() => {
+      if (statusRef.current === "recording") {
+        finishRecording();
+      }
+    }, 1500);
+  };
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     
-    // API: Browser Web Speech API is still used here for Speech-to-Text (Whisper is planned next phase)
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      console.warn("Speech Recognition not supported in this browser.");
-      return;
+        console.warn("Speech recognition not supported");
+        return;
     }
 
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
-    recognition.interimResults = false;
+    recognition.interimResults = true; // Use interim to catch wake word faster
     recognition.lang = 'en-US';
+    recognitionRef.current = recognition;
 
     recognition.onresult = (event) => {
-      const current = event.resultIndex;
-      const resultText = event.results[current][0].transcript;
-      setTranscript(resultText);
-      handleCommand(resultText);
-    };
+      if (statusRef.current === "speaking" || statusRef.current === "processing") return;
 
-    recognition.onend = () => {
-      if (isListening) {
-        recognition.start(); // auto restart if it stops unexpectedly while active
+      let currentInterim = "";
+      let newFinals = "";
+      
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          newFinals += event.results[i][0].transcript;
+        } else {
+          currentInterim += event.results[i][0].transcript;
+        }
+      }
+
+      const text = (newFinals + " " + currentInterim).toLowerCase();
+
+      if (statusRef.current === "idle") {
+        if (text.includes("hey tutor")) {
+          updateStatus("recording");
+          // Extract anything said after "hey tutor"
+          const idx = text.indexOf("hey tutor");
+          const queryPart = text.substring(idx + 9).trim();
+          accumulatedQueryRef.current = queryPart;
+          setDisplayTranscript(queryPart || "Listening...");
+          resetRecordingTimeout();
+        }
+      } else if (statusRef.current === "recording") {
+        if (newFinals) {
+          accumulatedQueryRef.current += " " + newFinals;
+        }
+        setDisplayTranscript(accumulatedQueryRef.current + " " + currentInterim);
+        resetRecordingTimeout();
       }
     };
 
-    if (isListening) {
-      recognition.start();
-      speak("Voice assistant listening. Say a command.");
-    } else {
-      recognition.stop();
-    }
+    recognition.onend = () => {
+      if (statusRef.current === "idle" || statusRef.current === "recording") {
+        try { recognition.start(); } catch(e) {}
+      }
+    };
+
+    // Auto-start on mount
+    try { recognition.start(); } catch(e) {}
 
     return () => {
-      recognition.stop();
+      recognition.onend = null;
+      try { recognition.stop(); } catch(e) {}
+      if (recordingTimeoutRef.current) clearTimeout(recordingTimeoutRef.current);
+      if (audioRef.current) audioRef.current.pause();
     };
-  }, [isListening, handleCommand, speak]);
-
-  const toggleListening = () => {
-    setIsListening(!isListening);
-  };
+  }, []);
 
   return (
     <div style={{ position: "fixed", bottom: "24px", right: "24px", zIndex: 1000, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "12px" }}>
-      {transcript && (
-        <div style={{ background: "rgba(0,0,0,0.8)", color: "white", padding: "12px 24px", borderRadius: "12px", fontSize: "14px", maxWidth: "250px" }}>
-          You said: "{transcript}"
+      {displayStatus !== "idle" && (
+        <div style={{ background: "rgba(0,0,0,0.8)", color: "white", padding: "12px 24px", borderRadius: "12px", fontSize: "14px", maxWidth: "300px" }}>
+          {displayStatus === "recording" && <strong style={{color: "var(--green)"}}>Listening: </strong>}
+          {displayStatus === "processing" && <strong style={{color: "var(--purple)"}}>Thinking... </strong>}
+          {displayStatus === "speaking" && <strong style={{color: "var(--blue)"}}>Speaking: </strong>}
+          <span style={{ fontStyle: "italic" }}>{displayTranscript}</span>
         </div>
       )}
-      <button 
-        onClick={toggleListening}
+      <div 
         style={{
           width: "64px", height: "64px", borderRadius: "50%",
-          background: isListening ? "var(--red)" : "var(--purple)",
+          background: displayStatus === "recording" ? "var(--green)" : 
+                      displayStatus === "processing" ? "var(--dark-gray)" :
+                      displayStatus === "speaking" ? "var(--blue)" : "var(--purple)",
           color: "white", border: "none",
           display: "flex", alignItems: "center", justifyContent: "center",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.2)", cursor: "pointer",
-          animation: isListening ? "pulse 1.5s infinite" : "none"
+          boxShadow: displayStatus !== "idle" ? "0 0 20px currentColor" : "0 4px 12px rgba(0,0,0,0.2)",
+          transition: "all 0.3s ease",
+          animation: displayStatus !== "idle" ? "pulse 1.5s infinite" : "none"
         }}
+        title="Always listening for 'Hey Tutor'"
       >
-        {isListening ? <Mic size={28} /> : <MicOff size={28} />}
-      </button>
+        {displayStatus === "idle" ? <Sparkles size={28} /> : 
+         displayStatus === "processing" ? <Loader2 size={28} className="animate-spin" /> :
+         displayStatus === "speaking" ? <Volume2 size={28} /> :
+         <Mic size={28} />}
+      </div>
     </div>
   );
 }

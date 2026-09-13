@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { api } from "../../lib/api";
-import TeacherNav from "../../components/TeacherNav";
+import DashboardLayout from "../../components/DashboardLayout";
 
 const BASE_URL = "http://localhost:8000";
 
@@ -72,7 +72,7 @@ export default function QuizCreate() {
   };
 
   return (
-    <TeacherNav>
+    <DashboardLayout userName={typeof window !== "undefined" ? (localStorage.getItem("user_name") || "Teacher") : "Teacher"} title="Create Quiz" subtitle="Add questions for an existing lesson.">
       <div className="card">
         <p className="step-title">Create a Quiz</p>
 
@@ -122,10 +122,10 @@ export default function QuizCreate() {
           </button>
         ) : (
           <div style={{ background: "var(--green-light)", color: "var(--green)", padding: 16, borderRadius: 12, textAlign: "center", marginTop: 12 }}>
-            Quiz created! Enrolled students will see it under &ldquo;My Quizzes.&rdquo;
+            Quiz created! The assigned student will see it under &ldquo;My Quizzes.&rdquo;
           </div>
         )}
       </div>
-    </TeacherNav>
+    </DashboardLayout>
   );
 }
