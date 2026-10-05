@@ -1,0 +1,18 @@
+Traceback (most recent call last):
+  File "E:\ai_project_git\backend\export_users_excel.py", line 80, in <module>
+    main_export()
+    ~~~~~~~~~~~^^
+  File "E:\ai_project_git\backend\export_users_excel.py", line 71, in main_export
+    total = upsert_rows(xlsx_path, rows)
+  File "E:\ai_project_git\backend\export_users_excel.py", line 49, in upsert_rows
+    wb.save(path)
+    ~~~~~~~^^^^^^
+  File "E:\ai_project_git\backend\venv\Lib\site-packages\openpyxl\workbook\workbook.py", line 386, in save
+    save_workbook(self, filename)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "E:\ai_project_git\backend\venv\Lib\site-packages\openpyxl\writer\excel.py", line 291, in save_workbook
+    archive = ZipFile(filename, 'w', ZIP_DEFLATED, allowZip64=True)
+  File "C:\Python314\Lib\zipfile\__init__.py", line 1462, in __init__
+    self.fp = io.open(file, filemode)
+              ~~~~~~~^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\rudra\\Desktop\\AI_Tutor_Users.xlsx'

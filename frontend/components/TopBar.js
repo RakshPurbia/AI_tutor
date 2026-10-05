@@ -2,14 +2,31 @@ import { Search, Mic, Bell, ChevronDown, User, LogOut, Menu } from "lucide-react
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 
-export default function TopBar({ userName, title, subtitle, onMenuToggle }) {
+export default function TopBar({ userName, title, subtitle, onMenuToggle, role: propRole }) {
   const [showDropdown, setShowDropdown] = useState(false);
-  const [role, setRole] = useState("student");
   const router = useRouter();
 
+  const getEffectiveRole = () => {
+    if (propRole) return propRole;
+    if (router.pathname.startsWith("/parent")) return "parent";
+    if (router.pathname.startsWith("/teacher") || router.pathname === "/upload") return "teacher";
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("user_role") || localStorage.getItem("role");
+      if (stored) return stored;
+    }
+    return "student";
+  };
+
+  const [role, setRole] = useState(getEffectiveRole);
+
   useEffect(() => {
-    setRole(localStorage.getItem("user_role") || localStorage.getItem("role") || "student");
-  }, []);
+    setRole(getEffectiveRole());
+  }, [propRole, router.pathname]);
+
+  const isStudent = role === 'student' && 
+    !router.pathname.startsWith("/parent") && 
+    !router.pathname.startsWith("/teacher") && 
+    router.pathname !== "/upload";
 
   const handleLogout = () => {
     localStorage.clear();
@@ -26,8 +43,8 @@ export default function TopBar({ userName, title, subtitle, onMenuToggle }) {
           <Menu size={24} className="text-main" />
         </button>
         <div>
-          <h2 className="text-xl font-bold">{title || `Hello, ${userName || (role === 'parent' ? "Parent" : "Student")} 👋`}</h2>
-          <p className="text-sm text-muted">{subtitle || (role === 'parent' ? "Monitor your child's learning journey" : "What would you like to learn today?")}</p>
+          <h2 className="text-xl font-bold">{title || `Hello, ${userName || (role === 'parent' ? "Parent" : role === 'teacher' ? "Teacher" : "Student")} 👋`}</h2>
+          <p className="text-sm text-muted">{subtitle || (role === 'parent' ? "Monitor your child's learning journey" : role === 'teacher' ? "Teacher workspace" : "What would you like to learn today?")}</p>
         </div>
       </div>
 
@@ -36,10 +53,10 @@ export default function TopBar({ userName, title, subtitle, onMenuToggle }) {
           <Search size={18} className="text-muted" />
           <input 
             type="text" 
-            placeholder={role === 'student' ? "Ask anything or press the mic..." : "Search..."} 
+            placeholder={isStudent ? "Ask anything or press the mic..." : "Search..."} 
             className="search-input"
           />
-          {role === 'student' && !["/profile", "/history", "/dashboard", "/parent", "/progress"].includes(router.pathname) && (
+          {isStudent && !["/profile", "/history", "/dashboard", "/progress"].includes(router.pathname) && (
             <button style={{ background: "var(--purple)", color: "white", border: "none", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
               <Mic size={16} />
             </button>

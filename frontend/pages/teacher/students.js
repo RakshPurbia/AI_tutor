@@ -11,6 +11,12 @@ export default function MyStudents() {
   const [userName, setUserName] = useState("Teacher");
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      localStorage.setItem("role", "teacher");
+      localStorage.setItem("user_role", "teacher");
+    }
+
     const teacherId = localStorage.getItem("teacher_id");
     if (!teacherId) {
       router.push("/login");
@@ -26,7 +32,7 @@ export default function MyStudents() {
   }, [router]);
 
   return (
-    <DashboardLayout userName={userName} title="My Students" subtitle="Track the progress of your students.">
+    <DashboardLayout role="teacher" disableAutoTTS={true} userName={userName} title="My Students" subtitle="Track the progress of your students.">
       <div className="card">
         <p className="step-title">Student Progress Overview</p>
         

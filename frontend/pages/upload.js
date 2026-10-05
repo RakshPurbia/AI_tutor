@@ -13,6 +13,11 @@ export default function Upload() {
   const fileInputRef = useRef(null);
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      localStorage.setItem("role", "teacher");
+      localStorage.setItem("user_role", "teacher");
+    }
     const name = localStorage.getItem("teacher_name") || "Teacher";
     setTeacherName(name);
 
@@ -87,13 +92,13 @@ export default function Upload() {
   };
 
   return (
-    <DashboardLayout userName={teacherName} title="Upload Document" subtitle="Add new learning materials">
+    <DashboardLayout role="teacher" disableAutoTTS={true} userName={teacherName} title="Upload Document" subtitle="Add new learning materials">
       <div style={{ maxWidth: "800px", margin: "0 auto" }}>
         
         {success && (
           <div style={{ background: "var(--green-light)", color: "var(--green)", padding: "16px", borderRadius: "12px", marginBottom: "24px", display: "flex", alignItems: "center", gap: "12px" }}>
             <CheckCircle size={20} />
-            <span className="font-bold">Lesson uploaded and text extracted successfully!</span>
+            <span className="font-bold">Topic uploaded successfully! Sequenced into section-wise modules with 5-question checkpoint quizzes.</span>
           </div>
         )}
 

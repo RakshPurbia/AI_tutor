@@ -30,6 +30,18 @@ def migrate():
             );
         """)
         
+        print("Creating tutor_conversations table...")
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS tutor_conversations (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                student_id UUID REFERENCES users(id) ON DELETE CASCADE,
+                role VARCHAR(50) NOT NULL,
+                message TEXT NOT NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_tutor_conv_student ON tutor_conversations(student_id);")
+        
         conn.commit()
         print("Migration successful.")
     except Exception as e:

@@ -24,6 +24,7 @@ export default function Login() {
         localStorage.setItem("student_id", data.student_id);
         localStorage.setItem("student_name", name);
         localStorage.setItem("role", "student");
+        localStorage.setItem("user_role", "student");
         router.push("/onboarding");
       } catch (err) { console.error(err); }
     } else if (role === "teacher") {
@@ -37,10 +38,12 @@ export default function Login() {
         localStorage.setItem("teacher_id", data.teacher_id);
         localStorage.setItem("teacher_name", name);
         localStorage.setItem("role", "teacher");
+        localStorage.setItem("user_role", "teacher");
         router.push("/teacher/dashboard");
       } catch (err) { console.error(err); }
     } else if (role === "parent") {
       localStorage.setItem("role", "parent");
+      localStorage.setItem("user_role", "parent");
       router.push("/parent");
     }
   };

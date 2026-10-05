@@ -1,15 +1,48 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import DashboardLayout from "../components/DashboardLayout";
-import { User, Activity, Headphones, EyeOff, Sparkles, Clock } from "lucide-react";
+import { User, Activity, Headphones, EyeOff, Sparkles, Clock, Volume2 } from "lucide-react";
 
 export default function Profile() {
   const router = useRouter();
   const [profile, setProfile] = useState(null);
   const [diagnosticQuizzes, setDiagnosticQuizzes] = useState([]);
+  const [role, setRole] = useState("student");
   const [loading, setLoading] = useState(true);
+  
+  const [voiceProfiles, setVoiceProfiles] = useState([]);
+  const [activeProfileId, setActiveProfileId] = useState(null);
+  const [tutorName, setTutorName] = useState("Tutor");
+  const [defaultGender, setDefaultGender] = useState("female");
+  const [newVoiceName, setNewVoiceName] = useState("");
+  const [newVoiceFile, setNewVoiceFile] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const fetchVoiceProfiles = async (studentId) => {
+    try {
+      const res = await fetch(`http://localhost:8000/api/voice-profiles/${studentId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setVoiceProfiles(data.profiles || []);
+        setActiveProfileId(data.active_profile_id);
+        setTutorName(data.tutor_name || "Tutor");
+        const lowerName = (data.tutor_name || "").toLowerCase();
+        if (lowerName.includes("male") && !lowerName.includes("female")) {
+          setDefaultGender("male");
+        } else {
+          setDefaultGender("female");
+        }
+        window.dispatchEvent(new CustomEvent("voice_profile_updated", { detail: { tutor_name: data.tutor_name || "Tutor" } }));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      setRole(localStorage.getItem("user_role") || localStorage.getItem("role") || "student");
+    }
     const fetchProfile = async () => {
       try {
         const studentId = localStorage.getItem("student_id") || "00000000-0000-0000-0000-000000000002";
@@ -26,6 +59,8 @@ export default function Profile() {
           const diagnostics = allQuizzes.filter(quiz => quiz.title.toLowerCase().includes("diagnostic"));
           setDiagnosticQuizzes(diagnostics);
         }
+        
+        await fetchVoiceProfiles(studentId);
       } catch (e) {
         console.error("Failed to fetch profile or quizzes", e);
       } finally {
@@ -35,11 +70,74 @@ export default function Profile() {
     fetchProfile();
   }, []);
 
-  if (loading) return <DashboardLayout><div style={{ padding: "40px" }}>Loading profile...</div></DashboardLayout>;
-  if (!profile) return <DashboardLayout><div style={{ padding: "40px" }}>Failed to load profile.</div></DashboardLayout>;
+  const handleUploadVoice = async (e) => {
+    e.preventDefault();
+    if (!newVoiceName || !newVoiceFile) return alert("Please provide a name and an audio sample.");
+    setIsUploading(true);
+    const formData = new FormData();
+    const studentId = localStorage.getItem("student_id") || "00000000-0000-0000-0000-000000000002";
+    formData.append("student_id", studentId);
+    formData.append("persona_name", newVoiceName);
+    formData.append("audio_sample", newVoiceFile);
+
+    try {
+      const res = await fetch("http://localhost:8000/api/voice-profiles", {
+        method: "POST",
+        body: formData,
+      });
+      if (res.ok) {
+        setNewVoiceName("");
+        setNewVoiceFile(null);
+        e.target.reset(); // clear file input
+        await fetchVoiceProfiles(studentId);
+      } else {
+        alert("Failed to upload voice profile.");
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleSetActive = async (profileId, gender = null) => {
+    const studentId = localStorage.getItem("student_id") || "00000000-0000-0000-0000-000000000002";
+    try {
+      const res = await fetch("http://localhost:8000/api/voice-profiles/active", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ student_id: studentId, voice_profile_id: profileId, default_gender: gender })
+      });
+      if (res.ok) {
+        await fetchVoiceProfiles(studentId);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDeleteVoice = async (profileId) => {
+    if (!confirm("Are you sure you want to delete this voice profile?")) return;
+    const studentId = localStorage.getItem("student_id") || "00000000-0000-0000-0000-000000000002";
+    try {
+      const res = await fetch(`http://localhost:8000/api/voice-profiles/${profileId}?student_id=${studentId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        await fetchVoiceProfiles(studentId);
+      } else {
+        alert("Failed to delete voice profile.");
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  if (loading) return <DashboardLayout role={role} disableAutoTTS={role !== "student"}><div style={{ padding: "40px" }}>Loading profile...</div></DashboardLayout>;
+  if (!profile) return <DashboardLayout role={role} disableAutoTTS={role !== "student"}><div style={{ padding: "40px" }}>Failed to load profile.</div></DashboardLayout>;
 
   return (
-    <DashboardLayout userName={profile.name} title="Student Profile">
+    <DashboardLayout role={role} disableAutoTTS={role !== "student"} userName={profile.name} title="Student Profile">
       <div style={{ maxWidth: "800px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "24px" }}>
         
         {/* Header Card */}
@@ -130,6 +228,111 @@ export default function Profile() {
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Voice Clone & AI Tutor Persona Settings */}
+          <div className="card" style={{ gridColumn: "1 / -1" }}>
+            <h3 style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "20px", display: "flex", alignItems: "center", gap: "8px" }}>
+              <Volume2 className="text-purple" /> AI Tutor Persona & Voice Cloning
+            </h3>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+              <div>
+                <h4 style={{ fontWeight: "bold", marginBottom: "12px", fontSize: "15px" }}>Available Voice Clones</h4>
+                
+                {/* Default Voice Gender Selection */}
+                {!activeProfileId && (
+                  <div style={{ marginBottom: "20px", display: "flex", alignItems: "center", gap: "16px", background: "var(--bg-card-hover)", padding: "16px", borderRadius: "12px" }}>
+                    <div style={{ flex: 1 }}>
+                      <h4 style={{ fontWeight: "bold", fontSize: "15px" }}>Default AI Tutor Gender</h4>
+                      <p className="text-sm text-muted">Select the preferred voice gender for the default neural audio.</p>
+                    </div>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <button 
+                        className={defaultGender === "female" ? "btn-primary" : "btn-outline"}
+                        onClick={() => handleSetActive(null, "female")}
+                        style={{ padding: "8px 16px", borderRadius: "8px" }}
+                      >
+                        Female
+                      </button>
+                      <button 
+                        className={defaultGender === "male" ? "btn-primary" : "btn-outline"}
+                        onClick={() => handleSetActive(null, "male")}
+                        style={{ padding: "8px 16px", borderRadius: "8px" }}
+                      >
+                        Male
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {voiceProfiles.length === 0 && (
+                  <p className="text-sm text-muted">No custom voice clones uploaded yet. Upload a voice sample below or use default neural audio.</p>
+                )}
+              </div>
+
+              <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
+                {voiceProfiles.map(vp => (
+                  <div key={vp.id} style={{ 
+                    border: activeProfileId === vp.id ? "2px solid var(--purple)" : "1px solid var(--border)", 
+                    padding: "16px", borderRadius: "12px", minWidth: "200px" 
+                  }}>
+                    <h4 style={{ fontWeight: "bold" }}>{vp.persona_name}</h4>
+                    <p className="text-sm text-muted" style={{ marginBottom: "16px" }}>
+                      Created: {new Date(vp.created_at).toLocaleDateString()}
+                    </p>
+                    <div style={{ display: "flex", gap: "8px", marginTop: "16px" }}>
+                      <button 
+                        className={activeProfileId === vp.id ? "btn-primary" : "btn-outline"}
+                        onClick={() => handleSetActive(activeProfileId === vp.id ? null : vp.id)}
+                        style={{ flex: 1, padding: "8px", borderRadius: "8px" }}
+                      >
+                        {activeProfileId === vp.id ? "Active" : "Set Active"}
+                      </button>
+                      <button 
+                        className="btn-outline"
+                        onClick={() => handleDeleteVoice(vp.id)}
+                        style={{ padding: "8px 12px", borderRadius: "8px", borderColor: "#ff4444", color: "#ff4444" }}
+                        title="Delete voice profile"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ background: "var(--bg-card-hover)", padding: "24px", borderRadius: "12px" }}>
+                <h4 style={{ fontWeight: "bold", marginBottom: "16px" }}>Add New Voice Clone</h4>
+                <p className="text-sm text-muted" style={{ marginBottom: "24px" }}>
+                  Upload a clear 10-second audio sample without background noise. The assistant will respond to "Hey {newVoiceName || '[Name]'}".
+                </p>
+                <form onSubmit={handleUploadVoice} style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "flex-end" }}>
+                  <div style={{ flex: 1, minWidth: "200px" }}>
+                    <label style={{ display: "block", marginBottom: "8px", fontSize: "14px" }}>Clone Name</label>
+                    <input 
+                      type="text" 
+                      value={newVoiceName}
+                      onChange={e => setNewVoiceName(e.target.value)}
+                      placeholder="e.g. Jarvis"
+                      style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid var(--border)", background: "transparent", color: "white" }}
+                    />
+                  </div>
+                  <div style={{ flex: 1, minWidth: "200px" }}>
+                    <label style={{ display: "block", marginBottom: "8px", fontSize: "14px" }}>Audio Sample (10s)</label>
+                    <input 
+                      type="file" 
+                      accept="audio/*"
+                      onChange={e => setNewVoiceFile(e.target.files[0])}
+                      style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid var(--border)", background: "transparent", color: "white" }}
+                    />
+                  </div>
+                  <button type="submit" disabled={isUploading} className="btn-primary" style={{ padding: "12px 24px", borderRadius: "8px", height: "46px" }}>
+                    {isUploading ? "Uploading..." : "Create Voice"}
+                  </button>
+                </form>
+              </div>
+            </div>
           </div>
 
         </div>

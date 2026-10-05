@@ -7,7 +7,21 @@ export default function VoiceAssistant({ onClose, studentId }) {
   const [status, setStatus] = useState("listening"); // 'listening', 'processing', 'speaking', 'idle'
   const [transcript, setTranscript] = useState("");
   const [response, setResponse] = useState("");
-  
+  const [tutorName, setTutorName] = useState("Tutor");
+
+  useEffect(() => {
+    if (studentId) {
+      fetch(`http://localhost:8000/api/profile/${studentId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.tutor_name) {
+            setTutorName(data.tutor_name);
+          }
+        })
+        .catch(console.error);
+    }
+  }, [studentId]);
+
   const recognitionRef = useRef(null);
   const audioRef = useRef(null);
   const statusRef = useRef("listening");
@@ -28,7 +42,7 @@ export default function VoiceAssistant({ onClose, studentId }) {
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.continuous = false;
       recognitionRef.current.interimResults = true;
-      
+
       recognitionRef.current.onresult = (event) => {
         let currentTranscript = "";
         for (let i = event.resultIndex; i < event.results.length; ++i) {
@@ -48,7 +62,7 @@ export default function VoiceAssistant({ onClose, studentId }) {
           handleVoiceInput(finalTranscript);
         } else if (statusRef.current === "listening") {
           // Keep listening if nothing was heard
-          try { recognitionRef.current.start(); } catch(e) {}
+          try { recognitionRef.current.start(); } catch (e) { }
         }
       };
 
@@ -74,51 +88,6 @@ export default function VoiceAssistant({ onClose, studentId }) {
   }, []); // Run once on mount
 
   const handleVoiceInput = (text) => {
-    const lower = text.toLowerCase();
-    
-    // Navigation command parsing
-    if (lower.includes("dashboard")) {
-      router.push("/dashboard");
-      onClose();
-      return;
-    }
-    if (lower.includes("tutor") || lower.includes("chat")) {
-      router.push("/tutor");
-      onClose();
-      return;
-    }
-    if (lower.includes("library")) {
-      router.push("/library");
-      onClose();
-      return;
-    }
-    if (lower.includes("quiz")) {
-      router.push("/quizzes");
-      onClose();
-      return;
-    }
-    if (lower.includes("progress")) {
-      router.push("/progress");
-      onClose();
-      return;
-    }
-    if (lower.includes("history")) {
-      router.push("/history");
-      onClose();
-      return;
-    }
-    if (lower.includes("profile")) {
-      router.push("/profile");
-      onClose();
-      return;
-    }
-    if (lower.includes("settings")) {
-      router.push("/settings");
-      onClose();
-      return;
-    }
-    
-    // Fallback to AI Tutor
     handleAskTutor(text);
   };
 
@@ -135,6 +104,15 @@ export default function VoiceAssistant({ onClose, studentId }) {
       });
       const data = await res.json();
       setResponse(data.answer);
+
+      if (data.navigation_action) {
+        const dest = data.navigation_action.split("_")[1].toLowerCase();
+        setTimeout(() => {
+          router.push(`/${dest}`);
+          onClose();
+        }, 1500);
+      }
+
       playTTS(data.answer);
     } catch (error) {
       console.error("Error asking tutor:", error);
@@ -151,30 +129,30 @@ export default function VoiceAssistant({ onClose, studentId }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text })
       });
-      
+
       if (!res.ok) throw new Error("TTS failed");
-      
+
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
       audioRef.current = audio;
-      
+
       audio.onended = () => {
         setStatus("listening");
         setTranscript("");
         setResponse("");
         if (recognitionRef.current) {
-          try { recognitionRef.current.start(); } catch(e) {}
+          try { recognitionRef.current.start(); } catch (e) { }
         }
       };
-      
+
       audio.play();
     } catch (error) {
       console.error("Error playing TTS:", error);
       setStatus("idle");
     }
   };
-  
+
   const toggleListening = () => {
     if (status === "listening") {
       if (recognitionRef.current) recognitionRef.current.stop();
@@ -184,26 +162,26 @@ export default function VoiceAssistant({ onClose, studentId }) {
       setResponse("");
       setStatus("listening");
       if (recognitionRef.current) {
-        try { recognitionRef.current.start(); } catch(e) {}
+        try { recognitionRef.current.start(); } catch (e) { }
       }
     } else if (status === "speaking" && audioRef.current) {
-       audioRef.current.pause();
-       setStatus("idle");
+      audioRef.current.pause();
+      setStatus("idle");
     }
   };
 
   return (
-    <div style={{ 
-      position: "fixed", top: 0, left: 0, width: "100%", height: "100%", 
-      background: "rgba(10, 10, 20, 0.95)", zIndex: 9999, 
-      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" 
+    <div style={{
+      position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
+      background: "rgba(10, 10, 20, 0.95)", zIndex: 9999,
+      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center"
     }}>
       <button onClick={onClose} style={{ position: "absolute", top: "32px", right: "32px", background: "transparent", border: "none", color: "white", cursor: "pointer" }}>
         <X size={32} />
       </button>
 
       <h2 style={{ color: "white", fontSize: "24px", fontWeight: "bold", marginBottom: "48px" }}>Voice Assistant</h2>
-      
+
       <p style={{ color: "var(--text-muted)", fontSize: "16px", marginBottom: "32px", minHeight: "24px" }}>
         {status === "listening" && "Listening..."}
         {status === "processing" && "Thinking..."}
@@ -217,21 +195,21 @@ export default function VoiceAssistant({ onClose, studentId }) {
         <div style={{ width: "4px", height: "40%", background: "var(--purple)", borderRadius: "2px", animation: status === "listening" || status === "speaking" ? "pulse 1.2s infinite alternate" : "none" }}></div>
         <div style={{ width: "4px", height: "80%", background: "var(--purple)", borderRadius: "2px", animation: status === "listening" || status === "speaking" ? "pulse 0.8s infinite alternate" : "none" }}></div>
         <div style={{ width: "4px", height: "100%", background: "var(--purple)", borderRadius: "2px", animation: status === "listening" || status === "speaking" ? "pulse 1.5s infinite alternate" : "none" }}></div>
-        
+
         {/* Main Icon Button */}
-        <div 
+        <div
           onClick={toggleListening}
-          style={{ 
-            margin: "0 24px", width: "96px", height: "96px", 
-            background: status === "processing" ? "var(--dark-gray)" : "var(--purple)", 
-            borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", 
+          style={{
+            margin: "0 24px", width: "96px", height: "96px",
+            background: status === "processing" ? "var(--dark-gray)" : "var(--purple)",
+            borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
             color: "white", cursor: "pointer",
             boxShadow: status === "processing" ? "none" : "0 0 32px var(--purple)",
             transition: "all 0.3s ease"
           }}>
-          {status === "processing" ? <Loader2 size={40} className="animate-spin" style={{animation: "spin 2s linear infinite"}} /> : 
-           status === "speaking" ? <Volume2 size={40} /> :
-           <Mic size={40} />}
+          {status === "processing" ? <Loader2 size={40} className="animate-spin" style={{ animation: "spin 2s linear infinite" }} /> :
+            status === "speaking" ? <Volume2 size={40} /> :
+              <Mic size={40} />}
         </div>
 
         <div style={{ width: "4px", height: "100%", background: "var(--purple)", borderRadius: "2px", animation: status === "listening" || status === "speaking" ? "pulse 1.1s infinite alternate" : "none" }}></div>
@@ -243,11 +221,11 @@ export default function VoiceAssistant({ onClose, studentId }) {
       <div style={{ maxWidth: "600px", textAlign: "center", minHeight: "100px", padding: "0 20px" }}>
         {transcript && <p style={{ color: "white", fontSize: "18px", fontStyle: "italic", marginBottom: "16px" }}>"{transcript}"</p>}
         {response && <p style={{ color: "var(--purple)", fontSize: "18px", fontWeight: "500", lineHeight: "1.5" }}>{response}</p>}
-        {!transcript && !response && <p style={{ color: "white", fontSize: "16px" }}>You can ask anything about your lessons</p>}
+        {!transcript && !response && <p style={{ color: "white", fontSize: "16px" }}>Try saying "Hey {tutorName}..."</p>}
       </div>
-      
-      <button 
-        className="btn-outline" 
+
+      <button
+        className="btn-outline"
         onClick={onClose}
         style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: "white", marginTop: "32px" }}
       >

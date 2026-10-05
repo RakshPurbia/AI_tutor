@@ -17,6 +17,9 @@ export default function TeacherUpload() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      localStorage.setItem("role", "teacher");
+      localStorage.setItem("user_role", "teacher");
       setUserName(localStorage.getItem("user_name") || "Teacher");
     }
     const teacherId = localStorage.getItem("teacher_id");
@@ -37,7 +40,16 @@ export default function TeacherUpload() {
 
   const submit = async () => {
     setSaving(true);
-    const teacherId = localStorage.getItem("teacher_id");
+    let teacherId = localStorage.getItem("teacher_id");
+    if (!teacherId) {
+      try {
+        const res = await api.teacherLogin("Teacher");
+        teacherId = res.teacher_id;
+        localStorage.setItem("teacher_id", teacherId);
+      } catch (err) {
+        teacherId = "00000000-0000-0000-0000-000000000001";
+      }
+    }
     try {
       await api.uploadContent({
         teacher_id: teacherId,
@@ -49,14 +61,15 @@ export default function TeacherUpload() {
       });
       setDone(true);
     } catch (e) {
-      alert("Upload failed. Is the backend running?");
+      console.error("Upload error:", e);
+      alert("Upload failed: " + (e.message || "Please check backend server connection"));
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <DashboardLayout userName={userName} title="Upload Lesson" subtitle="Upload PPT/PDF materials and assign them to a student.">
+    <DashboardLayout role="teacher" disableAutoTTS={true} userName={userName} title="Upload Lesson" subtitle="Upload PPT/PDF materials and assign them to a student.">
       <div className="card">
         <p className="step-title">Upload Learning Material</p>
 
@@ -118,9 +131,35 @@ export default function TeacherUpload() {
             {saving ? "Uploading..." : "Upload & Assign"}
           </button>
         ) : (
-          <div style={{ background: "var(--green-light)", color: "var(--green)", padding: 16, borderRadius: 12, textAlign: "center" }}>
-            Uploaded and assigned! The assigned student will now see it
-            under &ldquo;Uploaded Lessons.&rdquo;
+          <div style={{ background: "var(--green-light)", color: "var(--green)", padding: 20, borderRadius: 12, textAlign: "center" }}>
+            <p style={{ margin: "0 0 14px 0", fontWeight: "600", fontSize: "16px" }}>
+              Uploaded and assigned successfully!
+            </p>
+            <p style={{ margin: "0 0 16px 0", fontSize: "14px", opacity: 0.9 }}>
+              The assigned student will now see it under &ldquo;Uploaded Lessons.&rdquo;
+            </p>
+            <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
+              <button 
+                className="btn-primary" 
+                onClick={() => router.push("/teacher/dashboard")}
+                style={{ padding: "10px 24px", fontSize: "14px" }}
+              >
+                Go to Dashboard
+              </button>
+              <button 
+                className="btn-secondary" 
+                onClick={() => {
+                  setTitle("");
+                  setFileName("");
+                  setOcrText("");
+                  setSelectedStudents([]);
+                  setDone(false);
+                }}
+                style={{ padding: "10px 24px", fontSize: "14px", background: "white" }}
+              >
+                Upload Another
+              </button>
+            </div>
           </div>
         )}
       </div>

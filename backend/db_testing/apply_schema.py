@@ -1,7 +1,7 @@
 import os
 import psycopg2
 
-DB_URL = "postgresql://tsdbadmin:q93ykcz5vxvx20en@ceadio0qai.sln6s0n1l4.db.ghost.build:5432/tsdb?sslmode=require"
+DB_URL = "postgresql://neondb_owner:npg_pHOmL2cQU1Zf@ep-falling-voice-b50sod4i.c-7.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
 
 def apply_sql_file(conn, filepath):
     with open(filepath, 'r', encoding='utf-8') as f:

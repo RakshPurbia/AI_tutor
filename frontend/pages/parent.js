@@ -10,21 +10,14 @@ export default function ParentDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // In our simplified auth, the parent logs in and their user_id is saved.
-    // Let's assume user_id is the parent_id. Wait, index.js saves 'user_id' but we didn't save 'parent_id' specifically.
-    // Let's check localStorage for 'user_id' or 'parent_id'.
-    // In index.js we didn't save parent_id explicitly if they are parent? Wait!
-    // Let's look at index.js again if we need to.
-    
-    // Actually, I'll just use the user_id stored during login. 
-    // Since I don't know exactly what was stored, let me just try getting 'user_id' or a mock if it fails.
-    
-    // I need to fetch the parent_id. 
-    // Wait, the easiest way is to decode from localStorage if possible.
+    if (typeof window !== "undefined") {
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      localStorage.setItem("role", "parent");
+      localStorage.setItem("user_role", "parent");
+    }
+
     const getParentDashboard = async () => {
         try {
-            // For this demo, let's just fetch the parent by email or assuming user_id was stored.
-            // Wait, I can just fetch the one parent ID we know from db if localStorage is missing, but it's better to fetch from localStorage.
             const parentId = localStorage.getItem("parent_id") || "00000000-0000-0000-0000-000000000003"; // fallback to seeded parent
             
             const res = await api.getParentDashboard(parentId);
@@ -53,7 +46,7 @@ export default function ParentDashboard() {
 
   if (loading) {
     return (
-      <DashboardLayout userName="Parent" title="Dashboard" subtitle="Loading progress...">
+      <DashboardLayout role="parent" disableAutoTTS={true} userName="Parent" title="Dashboard" subtitle="Loading progress...">
         <div style={{ display: "flex", justifyContent: "center", padding: "40px" }}>Loading...</div>
       </DashboardLayout>
     );
@@ -76,7 +69,7 @@ export default function ParentDashboard() {
   ];
 
   return (
-    <DashboardLayout userName="Parent" title="Dashboard" subtitle={`Monitor ${studentName}'s progress`}>
+    <DashboardLayout role="parent" disableAutoTTS={true} userName="Parent" title="Dashboard" subtitle={`Monitor ${studentName}'s progress`}>
       <div style={{ maxWidth: "1000px" }}>
         
         {/* Stats Grid */}

@@ -17,6 +17,12 @@ export default function QuizCreate() {
   const [done, setDone] = useState(false);
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      localStorage.setItem("role", "teacher");
+      localStorage.setItem("user_role", "teacher");
+    }
+
     const teacherId = localStorage.getItem("teacher_id");
     if (!teacherId) {
       router.push("/teacher/login");
@@ -72,7 +78,7 @@ export default function QuizCreate() {
   };
 
   return (
-    <DashboardLayout userName={typeof window !== "undefined" ? (localStorage.getItem("user_name") || "Teacher") : "Teacher"} title="Create Quiz" subtitle="Add questions for an existing lesson.">
+    <DashboardLayout role="teacher" disableAutoTTS={true} userName={typeof window !== "undefined" ? (localStorage.getItem("user_name") || "Teacher") : "Teacher"} title="Create Quiz" subtitle="Add questions for an existing lesson.">
       <div className="card">
         <p className="step-title">Create a Quiz</p>
 

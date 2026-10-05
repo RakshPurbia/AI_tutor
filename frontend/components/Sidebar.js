@@ -16,19 +16,30 @@ import {
 
 import React from "react";
 
-export default function Sidebar({ isOpen }) {
+export default function Sidebar({ isOpen, role: propRole }) {
   const router = useRouter();
 
-  const [role, setRole] = React.useState("student");
+  const getEffectiveRole = () => {
+    if (propRole) return propRole;
+    if (router.pathname.startsWith("/parent")) return "parent";
+    if (router.pathname.startsWith("/teacher") || router.pathname === "/upload") return "teacher";
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("user_role") || localStorage.getItem("role");
+      if (stored) return stored;
+    }
+    return "student";
+  };
+
+  const [role, setRole] = React.useState(getEffectiveRole);
 
   React.useEffect(() => {
-    setRole(localStorage.getItem("user_role") || localStorage.getItem("role") || "student");
-  }, []);
+    setRole(getEffectiveRole());
+  }, [propRole, router.pathname]);
 
   const studentNav = [
     { name: "Home", path: "/dashboard", icon: <Home size={20} /> },
     { name: "AI Tutor", path: "/tutor", icon: <Bot size={20} /> },
-    { name: "My Library", path: "/library", icon: <Library size={20} /> },
+    { name: "My Library", path: "/lessons", icon: <Library size={20} /> },
     { name: "Quizzes", path: "/quizzes", icon: <ListTodo size={20} /> },
     { name: "Progress", path: "/progress", icon: <TrendingUp size={20} /> },
     { name: "History", path: "/history", icon: <History size={20} /> },

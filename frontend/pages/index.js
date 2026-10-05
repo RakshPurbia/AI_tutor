@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { GraduationCap, Presentation, Users, ArrowRight, ArrowLeft, BookOpen, Mic, TrendingUp } from "lucide-react";
+import { GraduationCap, Presentation, Users, ArrowRight, ArrowLeft, BookOpen, Mic, TrendingUp, CheckCircle2 } from "lucide-react";
 
 export default function UnifiedPortal() {
   const router = useRouter();
   const [selectedRole, setSelectedRole] = useState(null);
   const [isLogin, setIsLogin] = useState(true);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
   const [mounted, setMounted] = useState(false);
   
   useEffect(() => {
@@ -25,6 +27,35 @@ export default function UnifiedPortal() {
   ];
 
   const handleInputChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccessMsg("");
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match."); return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch(`http://localhost:8000/api/auth/reset-password`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, 
+        body: JSON.stringify({ email: formData.email, new_password: formData.password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Failed to reset password");
+      
+      setSuccessMsg("Password reset successfully! You can now log in.");
+      setTimeout(() => {
+        setIsForgotPassword(false);
+        setSuccessMsg("");
+        setFormData({ ...formData, password: "", confirmPassword: "" });
+      }, 2500);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -49,6 +80,7 @@ export default function UnifiedPortal() {
       
       localStorage.setItem("user_name", data.name);
       localStorage.setItem("user_role", data.role);
+      localStorage.setItem("role", data.role);
       if (data.role === "student") {
         localStorage.setItem("student_id", data.user_id);
         router.push(isLogin ? "/dashboard" : "/onboarding");
@@ -68,17 +100,17 @@ export default function UnifiedPortal() {
   const activeRole = roles.find(r => r.id === selectedRole);
 
   return (
-    <div className="unified-portal-container" style={{ display: "flex", height: "100vh", width: "100vw", backgroundColor: "#ffffff", color: "#0f172a", overflow: "hidden" }}>
+    <div style={{ display: "flex", height: "100vh", width: "100vw", backgroundColor: "#ffffff", color: "#0f172a", overflow: "hidden" }}>
       
       {/* Left Column: Beautiful layout mimicking the provided image */}
-      <div className="portal-left-column" style={{ flex: 1.3, display: "flex", padding: "40px 60px", backgroundColor: "#f9f8ff", position: "relative", overflow: "hidden" }}>
+      <div style={{ flex: 1.3, display: "flex", padding: "40px 60px", backgroundColor: "#f9f8ff", position: "relative", overflow: "hidden" }}>
         
         {/* Soft gradient floor for the 3D character */}
         <div style={{ position: "absolute", bottom: 0, left: 0, width: "100%", height: "30%", background: "linear-gradient(180deg, rgba(249,248,255,0) 0%, #edeaff 100%)", zIndex: 0 }}></div>
 
         {/* Left Side (Text & Features) */}
-        <div className="portal-text-content" style={{ flex: 1, zIndex: 1, display: "flex", flexDirection: "column", justifyContent: "center", maxWidth: "420px", opacity: mounted ? 1 : 0, transform: mounted ? "translateX(0)" : "translateX(-20px)", transition: "all 0.8s cubic-bezier(0.16, 1, 0.3, 1)" }}>
-          <h1 className="portal-title" style={{ fontSize: "44px", fontWeight: "900", color: "#0f172a", lineHeight: "1.15", marginBottom: "16px", letterSpacing: "-1px" }}>
+        <div style={{ flex: 1, zIndex: 1, display: "flex", flexDirection: "column", justifyContent: "center", maxWidth: "420px", opacity: mounted ? 1 : 0, transform: mounted ? "translateX(0)" : "translateX(-20px)", transition: "all 0.8s cubic-bezier(0.16, 1, 0.3, 1)" }}>
+          <h1 style={{ fontSize: "44px", fontWeight: "900", color: "#0f172a", lineHeight: "1.15", marginBottom: "16px", letterSpacing: "-1px" }}>
             <span style={{ color: "#6d28d9" }}>AI-Powered</span><br />
             Learning for<br />Everyone
           </h1>
@@ -124,7 +156,7 @@ export default function UnifiedPortal() {
         </div>
 
         {/* Right Side (3D Image) */}
-        <div className="portal-3d-image-container" style={{ flex: 1.2, zIndex: 1, position: "relative", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+        <div style={{ flex: 1.2, zIndex: 1, position: "relative", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
           <img 
             src="/3d-student.png" 
             alt="3D Student" 
@@ -141,8 +173,8 @@ export default function UnifiedPortal() {
         </div>
       </div>
 
-      {/* Right Column: Interactive Login Portal (replaces the flat buttons from the reference image) */}
-      <div className="portal-right-column" style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "64px", maxWidth: "600px", margin: "0 auto", zIndex: 10, overflowY: "auto", backgroundColor: "#ffffff" }}>
+      {/* Right Column: Interactive Login Portal */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "64px", maxWidth: "600px", margin: "0 auto", zIndex: 10, overflowY: "auto", backgroundColor: "#ffffff" }}>
         
         <div style={{ opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(20px)", transition: "all 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s" }}>
           
@@ -153,7 +185,7 @@ export default function UnifiedPortal() {
           ) : (
             <div style={{ marginBottom: "24px" }}>
               <button 
-                onClick={() => { setSelectedRole(null); setIsLogin(true); setError(""); }}
+                onClick={() => { setSelectedRole(null); setIsLogin(true); setIsForgotPassword(false); setError(""); setSuccessMsg(""); }}
                 style={{ display: "inline-flex", alignItems: "center", gap: "8px", background: "white", border: "1px solid #e2e8f0", color: "#64748b", cursor: "pointer", fontSize: "14px", fontWeight: "600", padding: "8px 16px", borderRadius: "100px", transition: "all 0.2s", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}
                 onMouseEnter={(e) => { e.currentTarget.style.color = "#0f172a"; e.currentTarget.style.borderColor = "#cbd5e1"; }}
                 onMouseLeave={(e) => { e.currentTarget.style.color = "#64748b"; e.currentTarget.style.borderColor = "#e2e8f0"; }}
@@ -207,10 +239,11 @@ export default function UnifiedPortal() {
           <div style={{ animation: "slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1)" }}>
             <div style={{ marginBottom: "28px" }}>
                <h2 style={{ fontSize: "32px", fontWeight: "900", color: "#0f172a", marginBottom: "12px", letterSpacing: "-0.5px" }}>
-                 {isLogin ? `${activeRole.title} Login` : `Create ${activeRole.title} Account`}
+                 {isForgotPassword ? "Reset Password" : isLogin ? `${activeRole.title} Login` : `Create ${activeRole.title} Account`}
                </h2>
                <p style={{ color: "#64748b", fontSize: "16px", lineHeight: "1.5" }}>
-                 {isLogin 
+                 {isForgotPassword ? "Enter your email address and a new password." :
+                   isLogin 
                    ? (selectedRole === "student" ? "Welcome back! Enter your credentials to continue learning." :
                       selectedRole === "teacher" ? "Access your classrooms, analytics, and AI grading tools." :
                       "Monitor your child's learning progress and AI insights.")
@@ -225,10 +258,15 @@ export default function UnifiedPortal() {
               <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#dc2626" }}></div>
               {error}
             </div>}
+            
+            {successMsg && <div style={{ padding: "16px", backgroundColor: "#f0fdf4", border: "1px solid #86efac", color: "#166534", borderRadius: "12px", marginBottom: "24px", fontWeight: "500", display: "flex", alignItems: "center", gap: "8px" }}>
+              <CheckCircle2 size={18} color="#16a34a" />
+              {successMsg}
+            </div>}
 
-            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px", backgroundColor: "#ffffff", padding: "36px", borderRadius: "24px", border: "1px solid rgba(226,232,240,0.8)", boxShadow: "0 20px 40px rgba(0,0,0,0.04)" }}>
+            <form onSubmit={isForgotPassword ? handleResetPassword : handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px", backgroundColor: "#ffffff", padding: "36px", borderRadius: "24px", border: "1px solid rgba(226,232,240,0.8)", boxShadow: "0 20px 40px rgba(0,0,0,0.04)" }}>
               
-              {!isLogin && (
+              {!isLogin && !isForgotPassword && (
                 <div>
                   <label className="auth-label">Full Name {selectedRole === "teacher" && "& Title"}</label>
                   <input type="text" name="name" value={formData.name} onChange={handleInputChange} className="auth-input" placeholder={selectedRole === "teacher" ? "e.g., Dr. Ananya Sen" : "e.g., Aarav Sharma"} required />
@@ -238,20 +276,20 @@ export default function UnifiedPortal() {
               <div>
                 <label className="auth-label">
                   {selectedRole === "student" ? "Student Email / Username" : 
-                   selectedRole === "teacher" ? (isLogin ? "Institutional Email" : "Official School Email") : 
+                   selectedRole === "teacher" ? (isLogin && !isForgotPassword ? "Institutional Email" : "Official School Email") : 
                    "Email Address"}
                 </label>
                 <input type="text" name="email" value={formData.email} onChange={handleInputChange} className="auth-input" placeholder={selectedRole === "student" ? "aarav@school.com" : selectedRole === "teacher" ? "prof.sharma@university.edu" : "parent@email.com"} required />
               </div>
 
-              {!isLogin && selectedRole === "teacher" && (
+              {!isLogin && !isForgotPassword && selectedRole === "teacher" && (
                 <div>
                   <label className="auth-label">School/Institution Name</label>
                   <input type="text" name="school" value={formData.school} onChange={handleInputChange} className="auth-input" placeholder="e.g., International Public School" required />
                 </div>
               )}
 
-              {!isLogin && selectedRole === "parent" && (
+              {!isLogin && !isForgotPassword && selectedRole === "parent" && (
                 <>
                   <div>
                     <label className="auth-label">Mobile Number (For critical updates)</label>
@@ -266,16 +304,22 @@ export default function UnifiedPortal() {
 
               <div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                  <label className="auth-label" style={{ marginBottom: 0 }}>{!isLogin ? (selectedRole === "teacher" ? "Create Password" : "Choose Password") : "Password"}</label>
-                  {isLogin && <a href="#" style={{ color: activeRole.color, fontSize: "13px", textDecoration: "none", fontWeight: "700" }}>Forgot Password?</a>}
+                  <label className="auth-label" style={{ marginBottom: 0 }}>
+                    {isForgotPassword ? "New Password" : !isLogin ? (selectedRole === "teacher" ? "Create Password" : "Choose Password") : "Password"}
+                  </label>
+                  {isLogin && !isForgotPassword && (
+                    <button type="button" onClick={(e) => { e.preventDefault(); setIsForgotPassword(true); setError(""); setSuccessMsg(""); }} style={{ background: "none", border: "none", color: activeRole.color, fontSize: "13px", cursor: "pointer", fontWeight: "700", padding: 0 }}>
+                      Forgot Password?
+                    </button>
+                  )}
                 </div>
-                <input type="password" name="password" value={formData.password} onChange={handleInputChange} className="auth-input" placeholder={isLogin ? "Enter your password" : (selectedRole === "teacher" ? "Strong password required" : "Minimum 8 characters")} required />
+                <input type="password" name="password" value={formData.password} onChange={handleInputChange} className="auth-input" placeholder={isForgotPassword ? "Enter new password" : isLogin ? "Enter your password" : (selectedRole === "teacher" ? "Strong password required" : "Minimum 8 characters")} required />
               </div>
 
-              {!isLogin && (
+              {(!isLogin || isForgotPassword) && (
                 <div>
-                  <label className="auth-label">Confirm Password</label>
-                  <input type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleInputChange} className="auth-input" placeholder="Repeat your password" required />
+                  <label className="auth-label">{isForgotPassword ? "Confirm New Password" : "Confirm Password"}</label>
+                  <input type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleInputChange} className="auth-input" placeholder={isForgotPassword ? "Repeat new password" : "Repeat your password"} required />
                 </div>
               )}
               
@@ -292,7 +336,7 @@ export default function UnifiedPortal() {
                 onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = `0 12px 25px ${activeRole.color}60`; }}
                 onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = `0 8px 20px ${activeRole.color}40`; }}
               >
-                {loading ? "Processing..." : isLogin ? (
+                {loading ? "Processing..." : isForgotPassword ? "Reset Password" : isLogin ? (
                    selectedRole === "student" ? "Enter Portal" :
                    selectedRole === "teacher" ? "Access Dashboard" :
                    "View Child's Progress"
@@ -307,12 +351,17 @@ export default function UnifiedPortal() {
 
             <div style={{ marginTop: "32px", textAlign: "center" }}>
               <button 
-                onClick={() => { setIsLogin(!isLogin); setError(""); }}
+                onClick={() => { 
+                  if (isForgotPassword) { setIsForgotPassword(false); } 
+                  else { setIsLogin(!isLogin); }
+                  setError(""); setSuccessMsg("");
+                }}
                 style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: "15px", fontWeight: "600", transition: "color 0.2s" }}
                 onMouseEnter={(e) => e.currentTarget.style.color = activeRole.color}
                 onMouseLeave={(e) => e.currentTarget.style.color = "#64748b"}
               >
-                {isLogin ? (
+                {isForgotPassword ? "Remembered your password? Back to Login" :
+                 isLogin ? (
                   selectedRole === "student" ? "Don't have an account? Sign Up Here" :
                   selectedRole === "teacher" ? "New educator? Register Institution Account" :
                   "New to the platform? Create Parent Account"
@@ -356,42 +405,6 @@ export default function UnifiedPortal() {
           }
           .auth-input::placeholder {
             color: #94a3b8;
-          }
-
-          /* Responsive Styles */
-          @media (max-width: 1024px) {
-            .unified-portal-container {
-              flex-direction: column !important;
-              overflow-y: auto !important;
-            }
-            .portal-left-column {
-              flex: none !important;
-              padding: 40px 24px !important;
-              min-height: 400px;
-            }
-            .portal-right-column {
-              flex: none !important;
-              padding: 40px 24px !important;
-              max-width: 100% !important;
-              width: 100%;
-            }
-            .portal-3d-image-container {
-              display: none !important; /* Hide 3D image on smaller screens */
-            }
-            .portal-text-content {
-              max-width: 100% !important;
-              align-items: center;
-              text-align: center;
-            }
-          }
-          
-          @media (max-width: 640px) {
-            .portal-title {
-              fontSize: 32px !important;
-            }
-            .portal-right-column form {
-              padding: 24px !important;
-            }
           }
         `}} />
       </div>

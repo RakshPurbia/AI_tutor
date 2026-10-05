@@ -18,6 +18,8 @@ export default function History() {
 
   return (
     <DashboardLayout 
+      role={role}
+      disableAutoTTS={role !== "student"}
       userName="Ananya" 
       title={role === "parent" ? "Child Learning History" : "Learning History"}
       subtitle={role === "parent" ? "Overview of recent lessons and activities" : undefined}
